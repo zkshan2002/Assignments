@@ -4,7 +4,7 @@ import numpy as np
 from typing import List
 
 
-def parse_file(lines: List[str]):
+def parse_input(lines: List[str]):
     try:
         num_list = lines[0].split(',')
         n = int(num_list[0])
@@ -52,6 +52,6 @@ if __name__ == '__main__':
     with open(file, 'r') as f:
         lines = f.readlines()
 
-    args = parse_file(lines)
+    args = parse_input(lines)
     res = solve(*args)
     print(vec2str(res))
