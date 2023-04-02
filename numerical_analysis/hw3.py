@@ -27,8 +27,19 @@ def update_i(A, b, lhs, L, U, i):
     return
 
 
+def jacobi_iteration(n, A, b, eps, max_iter):
+    x = np.zeros_like(b)
+    for iter in range(max_iter):
+        prev_x = x.copy()
+        for i in range(n):
+            update_i(A, b, x, prev_x, prev_x, i)
+        if np.linalg.norm(x - prev_x, ord=2) < eps:
+            return x, iter + 1
+    return x, None
+
+
 def gaussian_seidal_iteration(n, A, b, eps, max_iter):
-    x = np.zeros((n,), dtype=np.float64)
+    x = np.zeros_like(b)
     for iter in range(max_iter):
         prev_x = x.copy()
         for i in range(n):
@@ -39,7 +50,7 @@ def gaussian_seidal_iteration(n, A, b, eps, max_iter):
 
 
 def new_iteration(n, A, b, eps, max_iter):
-    x = np.zeros((n,), dtype=np.float64)
+    x = np.zeros_like(b)
     for iter in range(max_iter):
         prev_x = x.copy()
         x_tilde = np.empty_like(x)
@@ -52,11 +63,44 @@ def new_iteration(n, A, b, eps, max_iter):
     return x, None
 
 
-def vec2str(x):
-    str_list = []
-    for val in x:
-        str_list.append(f'{val:.8e}')
-    return ' '.join(str_list)
+def fastest_descent(n, A, b, eps, max_iter):
+    x = np.zeros_like(b)
+    for iter in range(max_iter):
+        r = b - A.dot(x)
+        alpha = r.dot(r) / (A.dot(r)).dot(r)
+        x += alpha * r
+        if np.linalg.norm(alpha * r, ord=2) < eps:
+            return x, iter
+    return x, None
+
+
+def conjugate_gradient(n, A, b, eps, max_iter):
+    x = np.zeros_like(b)
+    r = b - A.dot(x)
+    d = r.copy()
+    for iter in range(max_iter):
+        A_dot_d = A.dot(d)
+        alpha = r.dot(d) / A_dot_d.dot(d)
+        x += alpha * d
+        if np.linalg.norm(alpha * d, ord=2) < eps:
+            return x, iter
+        r -= alpha * A_dot_d
+        beta = -(A.dot(r)).dot(d) / A_dot_d.dot(d)
+        d = r - beta * d
+    return x, None
+
+
+def evaluate(func, n, A, b, eps=1e-9, max_iter=100):
+    def vec2str(x):
+        str_list = []
+        for val in x:
+            str_list.append(f'{val:.8e}')
+        return ' '.join(str_list)
+
+    x, iter = func(n, A, b, eps=eps, max_iter=max_iter)
+    print(iter)
+    print(vec2str(x))
+    return
 
 
 if __name__ == '__main__':
@@ -69,9 +113,7 @@ if __name__ == '__main__':
         lines = f.readlines()
 
     args = parse_input(lines)
-    x, iter = gaussian_seidal_iteration(eps=1e-9, max_iter=100, *args)
-    print(iter)
-    print(vec2str(x))
-    x, iter = new_iteration(eps=1e-9, max_iter=100, *args)
-    print(iter)
-    print(vec2str(x))
+    evaluate(fastest_descent, *args)
+    evaluate(conjugate_gradient, *args)
+    evaluate(gaussian_seidal_iteration, *args)
+    evaluate(new_iteration, *args)
