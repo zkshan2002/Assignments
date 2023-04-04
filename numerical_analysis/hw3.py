@@ -1,7 +1,7 @@
 import sys
 import os.path as osp
 import numpy as np
-from typing import List
+from typing import List, Callable, Tuple, Optional
 
 
 def parse_input(lines: List[str]):
@@ -17,7 +17,7 @@ def parse_input(lines: List[str]):
             A[i] = parse_line(lines[i + 1])
         b[:] = parse_line(lines[n + 1])
         assert len(lines) == n + 2
-        return n, A, b
+        return A, b
     except:
         raise IOError("error while parsing file")
 
@@ -27,7 +27,8 @@ def update_i(A, b, lhs, L, U, i):
     return
 
 
-def jacobi_iteration(n, A, b, eps, max_iter):
+def jacobi_iteration(A, b, eps, max_iter):
+    n = b.shape[0]
     x = np.zeros_like(b)
     for iter in range(max_iter):
         prev_x = x.copy()
@@ -38,7 +39,8 @@ def jacobi_iteration(n, A, b, eps, max_iter):
     return x, None
 
 
-def gaussian_seidal_iteration(n, A, b, eps, max_iter):
+def gaussian_seidal_iteration(A, b, eps, max_iter):
+    n = b.shape[0]
     x = np.zeros_like(b)
     for iter in range(max_iter):
         prev_x = x.copy()
@@ -49,7 +51,8 @@ def gaussian_seidal_iteration(n, A, b, eps, max_iter):
     return x, None
 
 
-def new_iteration(n, A, b, eps, max_iter):
+def new_iteration(A, b, eps, max_iter):
+    n = b.shape[0]
     x = np.zeros_like(b)
     for iter in range(max_iter):
         prev_x = x.copy()
@@ -63,7 +66,7 @@ def new_iteration(n, A, b, eps, max_iter):
     return x, None
 
 
-def fastest_descent(n, A, b, eps, max_iter):
+def fastest_descent(A, b, eps, max_iter):
     x = np.zeros_like(b)
     for iter in range(max_iter):
         r = b - A.dot(x)
@@ -74,7 +77,7 @@ def fastest_descent(n, A, b, eps, max_iter):
     return x, None
 
 
-def conjugate_gradient(n, A, b, eps, max_iter):
+def conjugate_gradient(A, b, eps, max_iter):
     x = np.zeros_like(b)
     r = b - A.dot(x)
     d = r.copy()
@@ -90,14 +93,17 @@ def conjugate_gradient(n, A, b, eps, max_iter):
     return x, None
 
 
-def evaluate(func, n, A, b, eps=1e-9, max_iter=100):
+def evaluate(
+        func: Callable[[np.array, np.array, float, int], Tuple[np.array, Optional[int]]],
+        A, b, eps=1e-9, max_iter=100
+):
     def vec2str(x):
         str_list = []
         for val in x:
             str_list.append(f'{val:.8e}')
         return ' '.join(str_list)
 
-    x, iter = func(n, A, b, eps=eps, max_iter=max_iter)
+    x, iter = func(A, b, eps, max_iter)
     print(iter)
     print(vec2str(x))
     return
@@ -113,7 +119,8 @@ if __name__ == '__main__':
         lines = f.readlines()
 
     args = parse_input(lines)
-    evaluate(fastest_descent, *args)
-    evaluate(conjugate_gradient, *args)
+    evaluate(jacobi_iteration, *args)
     evaluate(gaussian_seidal_iteration, *args)
     evaluate(new_iteration, *args)
+    evaluate(fastest_descent, *args)
+    evaluate(conjugate_gradient, *args)
