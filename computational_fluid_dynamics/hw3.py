@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def init():
+def init(dx):
     grid = np.linspace(0, 3, int(3 / dx) + 1, dtype=np.float64)
     grid = grid[:-1]
     return np.sin(grid * 2 * np.pi), grid
@@ -16,18 +16,18 @@ def get_left_periodic(u):
     return np.concatenate([u[-1:], u[:-1]])
 
 
-def forward_gt(grid, num_forward):
+def forward_gt(grid, num_forward, dt):
     return np.sin((grid - dt * num_forward) * 2 * np.pi)
 
 
-def forward(u, type, num_forward):
+def forward(u, type, num_forward, c):
     for i in range(num_forward):
-        u_prime = scheme_forward(u, type)
+        u_prime = scheme_forward(u, type, c)
         u = u_prime
     return u
 
 
-def scheme_forward(u, type):
+def scheme_forward(u, type, c):
     if type == 'Lax':
         u_prime = get_right_periodic(u) * (1 - c) / 2 + get_left_periodic(u) * (1 + c) / 2
     elif type == 'Lax Wendroff':
@@ -50,8 +50,8 @@ def scheme_forward(u, type):
     return u_prime
 
 
-def draw_batch(u_list, u_gt_list, grid, num_x, num_y):
-    assert len(u_list) == num_x * num_y
+def draw_batch(u_list, u_gt_list, grid, num_row, num_col):
+    assert len(u_list) == num_row * num_col
 
     def draw(u, u_gt, grid):
         plt.plot(grid, u, label='u')
@@ -59,8 +59,8 @@ def draw_batch(u_list, u_gt_list, grid, num_x, num_y):
         plt.legend(loc='upper left')
         return
 
-    for i in range(num_x * num_y):
-        plt.subplot(num_x, num_y, i + 1, ylim=(-2, 2))
+    for i in range(num_row * num_col):
+        plt.subplot(num_row, num_col, i + 1, ylim=(-2, 2))
         draw(u_list[i], u_gt_list[i], grid)
     plt.show()
     return
@@ -70,30 +70,16 @@ def l1_error(u, u_gt):
     return np.mean(np.abs(u - u_gt))
 
 
-dx = 1 / 100
-dt = 1 / 100
-c = dt / dx
-
-
-def precision_test(type):
-    u, grid = init()
-    num_forward = 1
-    u_h = forward(u, type, num_forward)
-    u_gt = forward_gt(grid, num_forward)
-    print(f'{l1_error(u_h, u_gt):.4e}')
-    # draw_batch([u_h], [u_gt], grid, 1, 1)
-    return
-
-
-def long_term_test(type, num_rollout, num_total):
-    u, grid = init()
+def long_term_test(type, num_rollout, num_total, dt, dx):
+    u, grid = init(dx)
+    c = dt / dx
     num_forward = 0
     for i in range(num_total):
         u_list, u_gt_list = [], []
         for j in range(12):
             num_forward += num_rollout
-            u_prime = forward(u, type, num_rollout)
-            u_gt = forward_gt(grid, num_forward)
+            u_prime = forward(u, type, num_rollout, c)
+            u_gt = forward_gt(grid, num_forward, c)
             u_list.append(u_prime)
             u_gt_list.append(u_gt)
             u = u_prime
@@ -101,7 +87,27 @@ def long_term_test(type, num_rollout, num_total):
     return
 
 
+def precision_test(type):
+    dx = 1 / 1000
+    num_forward = 1
+    log_dx_list = np.linspace(-3.51, -0.501, 100)
+    x_list, y_list = [], []
+    for log_dx in log_dx_list:
+        x_list.append(log_dx)
+        dt = 10 ** log_dx
+        c = dt / dx
+        u, grid = init(dx)
+        u_h = forward(u, type, num_forward, c)
+        u_gt = forward_gt(grid, num_forward, dt)
+        error = np.log10(l1_error(u_h, u_gt))
+        y_list.append(error)
+    plt.plot(x_list, y_list)
+    plt.xlabel('log10(dx)')
+    plt.ylabel('log10(error)')
+    plt.show()
+
+
 if __name__ == '__main__':
     # Lax Wendroff first second order upwind
-    # long_term_test('first order upwind', num_rollout=10000, num_total=1)
+    # long_term_test('Lax', num_rollout=100, num_total=1)
     precision_test('Lax')
