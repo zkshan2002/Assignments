@@ -19,7 +19,7 @@ def parse_input(lines: List[str]):
         raise IOError("error while parsing file")
 
 
-def primary_eigen(c, eps):
+def primary_eigen(c, max_iter, eps):
     n = c.shape[0]
     A = np.zeros((n, n), dtype=np.float64)
     A[0] = -c
@@ -27,14 +27,14 @@ def primary_eigen(c, eps):
 
     x = np.random.randn(n)
     lam = 0
-    for i in range(10000):
+    for i in range(max_iter):
         y = x / np.max(x)
         x = A.dot(y)
         new_lam = np.max(np.abs(x))
         if np.abs(new_lam - lam) < eps:
-            return new_lam
+            return new_lam, i
         lam = new_lam
-    return lam
+    return lam, None
 
 
 if __name__ == '__main__':
@@ -47,5 +47,5 @@ if __name__ == '__main__':
         lines = f.readlines()
 
     c = parse_input(lines)
-    lam = primary_eigen(c, eps=1e-20)
+    lam, iter = primary_eigen(c, max_iter=1000, eps=1e-20)
     print(f'{lam:.8e}')
